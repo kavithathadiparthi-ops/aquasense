@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b3446">
+<title>AquaSense | Water quality dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230b3446'/%3E%3Cpath d='M16 5C16 5 8 14.5 8 19.5a8 8 0 0 0 16 0C24 14.5 16 5 16 5z' fill='%235fd4e0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--paper:#f1f5f4;--surface:#fff;--ink:#0a2533;--ink2:#37505c;--muted:#6a818c;--line:#dbe5e6;--deep:#0b3446;--deeper:#06222f;--aqua:#5fd4e0;--teal:#0e7c86;--good:#17986b;--good-bg:#e1f4ec;--warn:#b9770a;--warn-bg:#fbf0d9;--bad:#d0403a;--bad-bg:#fbe5e3;--display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--body:"Instrument Sans","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--body)}
+h1,h2,h3,p,dl,dd{margin:0}button{font:inherit;cursor:pointer}.hidden{display:none!important}
+:focus-visible{outline:3px solid #2aa9b8;outline-offset:3px}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.bar{max-width:1180px;margin:0 auto;padding:18px clamp(16px,3vw,32px);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brand b{display:block;font:700 1.3rem/1.1 var(--display);letter-spacing:-.01em}
+.brand span{display:block;font-size:.8rem;color:var(--muted)}
+.bar-right{display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:9px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:.85rem;color:var(--ink2)}
+.chip i{width:9px;height:9px;border-radius:50%;background:#b6c4c9}
+.chip.on i{background:var(--good);animation:pulse 2.2s infinite}.chip.off i{background:var(--bad)}
+.ghost{border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:999px;padding:8px 16px;font-weight:500}
+.ghost:hover{background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(16px,3vw,32px) 56px;display:grid;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:20px}
+.hero{--accent:#cfe6eb;--w1:#69c3d6;--w2:#1f6f88;position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:center;gap:12px;padding:clamp(26px,4.5vw,60px);border-radius:28px;color:#e8f5f7;background:radial-gradient(760px 460px at 82% 35%,rgba(95,212,224,.2),transparent 62%),linear-gradient(160deg,var(--deep),var(--deeper))}
+.hero.s-good{--accent:#6df0c8;--w1:#43e3c3;--w2:#0f8f7e}
+.hero.s-warn{--accent:#ffd074;--w1:#f3c556;--w2:#c98a14}
+.hero.s-bad{--accent:#ff9d92;--w1:#ff8576;--w2:#b9372f}
+.hero-meta{color:#93b7c2;font-size:.92rem;min-height:1.4em}
+.verdict{font:700 clamp(2.2rem,5.6vw,4rem)/1.05 var(--display);letter-spacing:-.03em;color:var(--accent);margin:12px 0 16px;transition:color .6s}
+.hero-sub{max-width:44ch;color:#c4dde3;font-size:1.02rem}
+.hero-vals{display:flex;flex-wrap:wrap;gap:12px clamp(20px,3.4vw,40px);margin:28px 0 32px}
+.hero-vals dt{font-size:.82rem;color:#8fb3be}.hero-vals dd{font-size:1.7rem;line-height:1.2;color:#fff}
+.hero-vals dd small{font:500 .85rem var(--body);color:#8fb3be;margin-left:4px}
+.cta-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px}
+.cta{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:999px;padding:15px 30px;background:#fff;color:var(--deeper);font-weight:600;font-size:1rem;transition:transform .15s,background .3s}
+.cta:hover:not(:disabled){transform:translateY(-1px);background:var(--accent)}.cta:disabled{opacity:.8;cursor:progress}
+.spin{width:15px;height:15px;border:2px solid rgba(6,34,47,.25);border-top-color:var(--deeper);border-radius:50%;animation:spin .8s linear infinite}
+.hero-msg{color:#9cc0ca;font-size:.9rem;max-width:34ch}
+.vessel svg{display:block;width:100%;max-width:300px;margin:0 auto;filter:drop-shadow(0 28px 36px rgba(0,0,0,.35))}
+.level{transform:translateY(166px);transition:transform 1.2s cubic-bezier(.3,.8,.2,1)}
+.wave{--p:140px;animation:drift 5.5s linear infinite}.wave.front{fill:url(#waterGrad)}
+.wave.back{fill:var(--w1);opacity:.42;animation-duration:8.5s;animation-direction:reverse}
+.measuring .wave.front{animation-duration:1.5s}.measuring .wave.back{animation-duration:2.4s}
+.bub{fill:#fff;opacity:0;animation:rise 4.5s ease-in infinite}
+.bub:nth-of-type(2){animation-delay:1.1s}.bub:nth-of-type(3){animation-delay:2.2s}.bub:nth-of-type(4){animation-delay:3.1s}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:24px 28px 0}
+.panel-head h3{font:700 1.2rem var(--display)}.panel-head p{color:var(--muted);font-size:.88rem}
+.instruments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px}
+.inst{padding:22px 28px 30px;border-left:1px solid var(--line)}.inst:first-child{border-left:0}
+.inst-label{display:flex;justify-content:space-between;gap:10px;font-weight:600;color:var(--ink2)}
+.inst-label span{font-weight:400;color:var(--muted);font-size:.85rem}
+.inst-value{margin-top:12px;font-size:3.4rem;line-height:1;color:var(--ink);min-height:3.4rem;display:flex;align-items:baseline}
+.inst-value small{font:500 1.05rem var(--body);color:var(--muted);margin-left:7px}
+.inst-value.err{color:var(--bad);font-size:1.7rem;align-items:center}
+.scale{position:relative;height:10px;border-radius:99px;margin:26px 0 0}
+.scale.ph{background:linear-gradient(90deg,#d7262b 0%,#ef6c2a 14%,#f6b02d 28%,#e9e24c 42%,#55b95a 50%,#2aa7b8 64%,#3b6fc6 82%,#6a3fa0 100%)}
+.scale.tds{display:flex;gap:3px;background:none}.scale.tds b{display:block;height:100%}
+.scale.tds b:nth-child(1){flex:50;background:#3cc193;border-radius:99px 0 0 99px}
+.scale.tds b:nth-child(2){flex:30;background:#f1bd43}
+.scale.tds b:nth-child(3){flex:20;background:#e6675d;border-radius:0 99px 99px 0}
+.scale.temp{background:linear-gradient(90deg,#6aaee8,#9bd6d2 40%,#f2d27a 70%,#ee8a5b)}
+.pin{position:absolute;top:50%;left:var(--pos,0%);width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--ink);transform:translate(-50%,-50%);transition:left .9s cubic-bezier(.2,.8,.2,1),opacity .3s;box-shadow:0 2px 8px rgba(10,37,51,.3);opacity:0}
+.ticks{position:relative;height:20px;margin-top:10px;font-size:.78rem;color:var(--muted)}
+.ticks span{position:absolute;top:0;transform:translateX(-50%)}.ticks span.l{transform:none}.ticks span.r{transform:translateX(-100%)}
+.bracket{position:relative;height:8px;margin-top:2px}
+.bracket i{position:absolute;left:50%;width:13.57%;height:8px;border:2px solid #8ea3ab;border-top:0;border-radius:0 0 5px 5px}
+.inst-note{margin-top:8px;font-size:.82rem;color:var(--muted)}
+.trends{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.trend{padding:24px 28px}.trend h3{font:700 1.05rem var(--display)}
+.trend-sub{color:var(--muted);font-size:.85rem;margin-bottom:6px}
+.trend svg{display:block;width:100%;height:auto;overflow:visible}
+.chart-empty{color:var(--muted);padding:34px 0;text-align:center;font-size:.92rem}
+.tablewrap{margin-top:14px;padding:0 12px 14px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th{text-align:left;font-weight:500;font-size:.82rem;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--line)}
+td{padding:14px 16px;border-bottom:1px solid #edf2f2;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f7fafa}
+td.n{font-family:var(--display);font-variant-numeric:tabular-nums;font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 10px;border-radius:999px;font-weight:600;font-size:.85rem}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.good{background:var(--good-bg);color:var(--good)}.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.none{background:#eef2f3;color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:34px 0}
+.outline{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 18px;font-weight:500}
+.outline:hover{border-color:#a9c0c4;background:#f7fafa}
+.disclaimer{background:var(--warn-bg);color:#6b4a05;border-radius:16px;padding:16px 20px;font-size:.88rem}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,24px);background:var(--deeper);color:#fff;padding:13px 22px;border-radius:14px;box-shadow:0 12px 36px rgba(6,34,47,.35);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:20;max-width:calc(100vw - 32px)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.auth-brand{position:relative;overflow:hidden;color:#e8f5f7;padding:clamp(28px,5vw,64px);display:flex;flex-direction:column;justify-content:space-between;gap:40px;background:radial-gradient(700px 420px at 20% 15%,rgba(95,212,224,.2),transparent 60%),linear-gradient(165deg,var(--deep),var(--deeper))}
+.auth-brand .brand span{color:#8fb3be}
+.auth-copy{position:relative;z-index:1;max-width:30rem}
+.auth-copy h1{font:700 clamp(2.4rem,5vw,3.8rem)/1.02 var(--display);letter-spacing:-.035em}
+.auth-copy p{margin-top:16px;color:#b9d3da;font-size:1.02rem}
+.auth-waves{position:absolute;left:0;right:0;bottom:0;width:100%;height:36%}
+.lw1{--p:300px;fill:rgba(95,212,224,.26);animation-duration:15s}
+.lw2{--p:300px;fill:rgba(95,212,224,.14);animation-duration:23s;animation-direction:reverse}
+.auth-form{display:grid;place-items:center;padding:clamp(24px,5vw,64px)}
+.auth-card{width:min(380px,100%)}
+.auth-card h2{font:700 1.9rem var(--display);letter-spacing:-.02em}
+.auth-card>p{color:var(--muted);margin:8px 0 26px}
+.field{margin-bottom:18px}.field label{display:block;font-weight:600;font-size:.88rem;margin-bottom:7px;color:var(--ink2)}
+.field-in{position:relative}
+.field input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #c5d4d6;background:#fff;color:var(--ink);font:inherit}
+.field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 4px rgba(14,124,134,.14)}
+.reveal{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--teal);font-weight:600;padding:8px 10px;border-radius:8px}
+.signin{width:100%;border:0;border-radius:12px;padding:15px;background:var(--deep);color:#fff;font-weight:600;font-size:1rem}
+.signin:hover:not(:disabled){background:var(--teal)}.signin:disabled{opacity:.7;cursor:progress}
+.form-error{color:var(--bad);min-height:1.5em;margin-top:14px;font-size:.9rem}
+@keyframes drift{to{transform:translateX(calc(var(--p) * -1))}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{0%{opacity:0;transform:translateY(0)}25%{opacity:.55}100%{opacity:0;transform:translateY(-80px)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(23,152,107,.5)}70%{box-shadow:0 0 0 8px rgba(23,152,107,0)}100%{box-shadow:0 0 0 0 rgba(23,152,107,0)}}
+@media (max-width:900px){.hero{grid-template-columns:1fr}.vessel svg{max-width:210px}.instruments{grid-template-columns:1fr}.inst{border-left:0;border-top:1px solid var(--line)}.inst:first-child{border-top:0}.trends{grid-template-columns:1fr}.auth{grid-template-columns:1fr}.auth-brand{min-height:300px}.auth-copy h1{font-size:2.2rem}}
+@media (max-width:640px){.tablewrap{padding:0 8px 8px;overflow:visible}table,tbody,tr,td{display:block;min-width:0}thead{display:none}tr{padding:12px 8px;border-bottom:1px solid var(--line)}tbody tr:last-child{border-bottom:0}td{display:flex;justify-content:space-between;gap:16px;padding:5px 8px;border:0;white-space:normal}td::before{content:attr(data-label);color:var(--muted);font-size:.85rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<section id="loginView" class="auth hidden">
+  <div class="auth-brand">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#5fd4e0"/><path d="M16 5C16 5 8 14.5 8 19.5a8 8 0 0 0 16 0C24 14.5 16 5 16 5z" fill="#06222f"/><path d="M11 20q2.5-2.4 5 0t5 0" stroke="#5fd4e0" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      <div><b>AquaSense</b><span>Water quality monitoring</span></div>
+    </div>
+    <div class="auth-copy">
+      <h1>Know what is in your water, the moment you ask.</h1>
+      <p>Live pH, TDS and temperature from your kit, with a rating after every test.</p>
+    </div>
+    <svg class="auth-waves" viewBox="0 0 1200 220" preserveAspectRatio="none" aria-hidden="true"><path id="lw2" class="wave lw2"/><path id="lw1" class="wave lw1"/></svg>
+  </div>
+  <div class="auth-form">
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <p>Use the account you created in Firebase Authentication.</p>
+      <form id="loginForm" novalidate>
+        <div class="field"><label for="email">Email address</label><div class="field-in"><input id="email" type="email" autocomplete="username" required></div></div>
+        <div class="field"><label for="password">Password</label><div class="field-in"><input id="password" type="password" autocomplete="current-password" required><button type="button" class="reveal" id="reveal" aria-label="Show password">Show</button></div></div>
+        <button id="loginBtn" class="signin" type="submit">Sign in to dashboard</button>
+        <div id="loginError" class="form-error" role="alert"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="dashboardView" class="hidden">
+  <header class="bar">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0b3446"/><path d="M16 5C16 5 8 14.5 8 19.5a8 8 0 0 0 16 0C24 14.5 16 5 16 5z" fill="#5fd4e0"/><path d="M11 20q2.5-2.4 5 0t5 0" stroke="#0b3446" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      <div><b>AquaSense</b><span>Kit 1</span></div>
+    </div>
+    <div class="bar-right">
+      <span class="chip" id="conn"><i></i><span id="connText">Connecting</span></span>
+      <button class="ghost" id="logout">Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero s-none" id="hero" aria-labelledby="verdict">
+      <div class="hero-copy">
+        <p class="hero-meta" id="heroMeta">No test recorded yet</p>
+        <h2 class="verdict" id="verdict">No test yet</h2>
+        <p class="hero-sub" id="heroSub">Run a test from here, or press the test button on the kit.</p>
+        <dl class="hero-vals">
+          <div><dt>pH</dt><dd class="num" id="hPh">--</dd></div>
+          <div><dt>TDS</dt><dd class="num" id="hTds">--</dd></div>
+          <div><dt>Temperature</dt><dd class="num" id="hTemp">--</dd></div>
+        </dl>
+        <div class="cta-row">
+          <button class="cta" id="testBtn"><span id="testLabel">Test water now</span></button>
+          <p class="hero-msg" id="testMessage" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="vessel" aria-hidden="true">
+        <svg viewBox="0 0 240 330">
+          <defs>
+            <clipPath id="glassClip"><rect x="50" y="24" width="140" height="268" rx="30"/></clipPath>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--w1)"/><stop offset="1" style="stop-color:var(--w2)"/></linearGradient>
+            <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
+          </defs>
+          <ellipse cx="120" cy="307" rx="78" ry="8" fill="#000" opacity=".28"/>
+          <rect x="50" y="24" width="140" height="268" rx="30" fill="url(#glassGrad)"/>
+          <g clip-path="url(#glassClip)"><g class="level" id="level">
+            <path id="waveBack" class="wave back"/><path id="waveFront" class="wave front"/>
+            <circle class="bub" cx="95" cy="120" r="3"/><circle class="bub" cx="140" cy="150" r="4.5"/><circle class="bub" cx="115" cy="95" r="2.5"/><circle class="bub" cx="160" cy="110" r="3.5"/>
+          </g></g>
+          <rect x="50" y="24" width="140" height="268" rx="30" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.5"/>
+          <rect x="62" y="48" width="7" height="150" rx="3.5" fill="#fff" opacity=".16"/>
+        </svg>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="liveTitle">
+      <div class="panel-head"><div><h3 id="liveTitle">Live readings</h3><p id="liveAge">Waiting for the kit</p></div></div>
+      <div class="instruments">
+        <div class="inst">
+          <div class="inst-label">pH<span>acidity</span></div>
+          <div class="inst-value num" id="phVal">--</div>
+          <div class="scale ph"><span class="pin" id="phPin"></span></div>
+          <div class="ticks"><span class="l" style="left:0">0</span><span style="left:50%">7</span><span class="r" style="left:100%">14</span></div>
+          <div class="bracket"><i></i></div>
+          <p class="inst-note">Bracket marks the highly recommended pH range, 7.0 to below 8.9.</p>
+        </div>
+        <div class="inst">
+          <div class="inst-label">TDS<span>dissolved solids</span></div>
+          <div class="inst-value num" id="tdsVal">--</div>
+          <div class="scale tds"><b></b><b></b><b></b><span class="pin" id="tdsPin"></span></div>
+          <div class="ticks"><span class="l" style="left:0">0</span><span style="left:50%">500</span><span style="left:80%">800</span><span class="r" style="left:100%">1000+</span></div>
+          <p class="inst-note" style="margin-top:10px">Green is highly recommended, amber moderate, red not recommended.</p>
+        </div>
+        <div class="inst">
+          <div class="inst-label">Temperature<span>DS18B20 probe</span></div>
+          <div class="inst-value num" id="tempVal">--</div>
+          <div class="scale temp"><span class="pin" id="tempPin"></span></div>
+          <div class="ticks"><span class="l" style="left:0">0</span><span style="left:50%">25</span><span class="r" style="left:100%">50</span></div>
+          <p class="inst-note" style="margin-top:10px">Used to correct the TDS reading. Not part of the rating.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="trends" aria-label="Trends">
+      <div class="panel trend"><h3>pH across tests</h3><p class="trend-sub" id="phTrendSub">Oldest to newest</p><div id="phChart"></div></div>
+      <div class="panel trend"><h3>TDS across tests</h3><p class="trend-sub" id="tdsTrendSub">Oldest to newest</p><div id="tdsChart"></div></div>
+    </section>
+
+    <section class="panel" aria-labelledby="histTitle">
+      <div class="panel-head">
+        <div><h3 id="histTitle">Test history</h3><p id="histSub">Latest 50 completed tests</p></div>
+        <button class="outline" id="exportBtn">Export CSV</button>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Date and time</th><th>Started from</th><th>pH</th><th>TDS (ppm)</th><th>Temp (°C)</th><th>Rating</th><th>Buzzer</th></tr></thead>
+        <tbody id="history"><tr><td colspan="7" class="empty">Waiting for history</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <p class="disclaimer">pH and TDS cannot prove that water is safe for medicine or drinking. Bacteria, heavy metals and other chemicals need a proper laboratory test. Treat this dashboard as a screening tool, not a certificate.</p>
+  </main>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getDatabase, ref, onValue, query, limitToLast, set } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCmjlEK1Cjo1DSrwbkJoxEhAR9PKUO4Skk",
+  authDomain: "aquasense-1b708.firebaseapp.com",
+  databaseURL: "https://aquasense-1b708-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "aquasense-1b708",
+  storageBucket: "aquasense-1b708.firebasestorage.app",
+  messagingSenderId: "582737957120",
+  appId: "1:582737957120:web:de5a98183182660ebaa3e5"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const base = "devices/kit1";
+const $ = (id) => document.getElementById(id);
+
+// Same limits as the ESP32 firmware
+const L = { HIGH_PH_MIN: 7.0, HIGH_PH_MAX: 8.9, HIGH_TDS: 500, MOD_PH_MIN: 5.0, MOD_TDS: 800 };
+const ONLINE_WINDOW_MS = 20000;
+const REQUEST_TIMEOUT_MS = 45000;
+
+function wave(period, count, amp, y, depth) {
+  let d = `M0 ${y}`;
+  for (let i = 0; i < count; i++) { const x = i * period; d += ` Q${x + period / 4} ${y - amp} ${x + period / 2} ${y} T${x + period} ${y}`; }
+  return d + ` V${depth} H0 Z`;
+}
+$("waveFront").setAttribute("d", wave(140, 4, 7, 0, 330));
+$("waveBack").setAttribute("d", wave(140, 4, 5, 3, 330));
+$("lw1").setAttribute("d", wave(300, 8, 16, 50, 220));
+$("lw2").setAttribute("d", wave(300, 8, 12, 30, 220));
+const setLevel = (f) => { $("level").style.transform = `translateY(${292 - f * 268}px)`; };
+setLevel(0.6);
+
+let serverOffset = 0;
+const nowMs = () => Date.now() + serverOffset;
+const okPh = (v) => Number.isFinite(v) && v >= 0 && v <= 14;
+const okTds = (v) => Number.isFinite(v) && v >= 0;
+const okTemp = (v) => Number.isFinite(v) && v > -100 && v < 150;   // firmware sends -999 on error
+const fmtTime = (ms) => ms ? new Date(Number(ms)).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "--";
+const sourceName = (t) => t === "HARDWARE_BUTTON" ? "Kit button" : t === "WEBSITE" ? "Website" : (t || "--");
+
+function classify(raw) {
+  const v = String(raw || "").toUpperCase();
+  if (v === "HIGHLY RECOMMENDED") return "HIGH";
+  if (v === "MODERATELY RECOMMENDED") return "MOD";
+  if (v === "NOT RECOMMENDED") return "POOR";
+  if (v === "SENSOR ERROR") return "ERR";
+  return "NONE";
+}
+const META = {
+  HIGH: { word: "Highly recommended", cls: "good", hero: "s-good", level: 0.74 },
+  MOD: { word: "Moderately recommended", cls: "warn", hero: "s-warn", level: 0.6 },
+  POOR: { word: "Not recommended", cls: "bad", hero: "s-bad", level: 0.46 },
+  ERR: { word: "Sensor error", cls: "bad", hero: "s-bad", level: 0.3 },
+  NONE: { word: "No test yet", cls: "none", hero: "s-none", level: 0.6 }
+};
+
+function explain(label, ph, tds) {
+  if (label === "HIGH") return `Best band: pH ${L.HIGH_PH_MIN} to below ${L.HIGH_PH_MAX} and TDS ${L.HIGH_TDS} ppm or less. The kit buzzer stays silent.`;
+  if (label === "MOD") return `Usable with care: not in the best band, but pH is at least ${L.MOD_PH_MIN} and TDS is ${L.MOD_TDS} ppm or less. The kit buzzer sounded for 5 seconds.`;
+  if (label === "POOR") {
+    const r = [];
+    if (okPh(ph) && ph < L.MOD_PH_MIN) r.push(`pH ${ph.toFixed(2)} is below ${L.MOD_PH_MIN}`);
+    if (okTds(tds) && tds > L.MOD_TDS) r.push(`TDS ${Math.round(tds)} ppm is above ${L.MOD_TDS}`);
+    return (r.length ? r.join(" and ") : "At least one reading is outside the usable range") + ". The kit buzzer sounded for 5 seconds.";
+  }
+  if (label === "ERR") return "A probe returned no valid reading. Check the wiring and probe connections.";
+  return "Run a test from here, or press the test button on the kit.";
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = $("toast"); el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 4200);
+}
+
+let lastStatus = null, rows = [], pendingId = null, timeoutHandle = null, historyReady = false, lastNewestKey = null, unsubs = [];
+onValue(ref(db, ".info/serverTimeOffset"), (s) => { serverOffset = s.val() || 0; });
+
+function paintConnection() {
+  const seen = lastStatus && Number(lastStatus.lastSeen || lastStatus.liveUpdatedAt);
+  const online = (seen ? nowMs() - seen : Infinity) < ONLINE_WINDOW_MS;
+  $("conn").className = "chip " + (!lastStatus ? "" : online ? "on" : "off");
+  $("connText").textContent = !lastStatus ? "Connecting" : online ? "Kit online" : "Kit offline";
+  const live = lastStatus && Number(lastStatus.liveUpdatedAt || lastStatus.lastSeen);
+  if (!live) { $("liveAge").textContent = "Waiting for the kit"; return; }
+  const secs = Math.max(0, Math.round((nowMs() - live) / 1000));
+  $("liveAge").textContent = secs < 60 ? `Updated ${secs} seconds ago` : secs < 3600 ? `Updated ${Math.round(secs / 60)} minutes ago` : `Last update ${fmtTime(live)}`;
+}
+setInterval(paintConnection, 2000);
+
+function setInst(key, raw, ok, fmt, frac, unit) {
+  const val = $(key + "Val"), pin = $(key + "Pin");
+  if (raw === undefined || raw === null) { val.className = "inst-value num"; val.textContent = "--"; pin.style.opacity = 0; return; }
+  const n = Number(raw);
+  if (!ok(n)) { val.className = "inst-value num err"; val.textContent = "Sensor error"; pin.style.opacity = 0; return; }
+  val.className = "inst-value num";
+  val.innerHTML = fmt(n) + (unit ? `<small>${unit}</small>` : "");
+  pin.style.opacity = 1;
+  pin.style.setProperty("--pos", Math.min(1, Math.max(0, frac(n))) * 100 + "%");
+}
+function paintLive() {
+  const s = lastStatus || {};
+  setInst("ph", s.ph, okPh, (v) => v.toFixed(2), (v) => v / 14, "");
+  setInst("tds", s.tds, okTds, (v) => String(Math.round(v)), (v) => v / 1000, "ppm");
+  setInst("temp", s.temperature, okTemp, (v) => v.toFixed(1), (v) => v / 50, "°C");
+  paintConnection();
+}
+
+function paintHero() {
+  const hero = $("hero");
+  let rec = rows[0];
+  if (!rec && lastStatus && classify(lastStatus.result || lastStatus.waterStatus) !== "NONE") {
+    rec = { ph: lastStatus.ph, tds: lastStatus.tds, temperature: lastStatus.temperature, result: lastStatus.result || lastStatus.waterStatus, trigger: lastStatus.trigger, ts: Number(lastStatus.timestamp || 0) };
+  }
+  const measuring = !!pendingId;
+  hero.classList.toggle("measuring", measuring);
+  hero.classList.remove("s-good", "s-warn", "s-bad", "s-none");
+  if (measuring) {
+    hero.classList.add("s-none");
+    $("verdict").textContent = "Measuring";
+    $("heroSub").textContent = "The kit is reading pH, TDS and temperature.";
+    setLevel(0.82);
+  } else {
+    const label = rec ? classify(rec.result || rec.waterStatus) : "NONE", m = META[label];
+    hero.classList.add(m.hero);
+    $("verdict").textContent = m.word;
+    $("heroSub").textContent = explain(label, rec && Number(rec.ph), rec && Number(rec.tds));
+    setLevel(m.level);
+  }
+  if (rec) {
+    $("heroMeta").textContent = `Last test ${fmtTime(rec.ts)}, started from ${sourceName(rec.trigger).toLowerCase()}`;
+    const ph = Number(rec.ph), tds = Number(rec.tds), t = Number(rec.temperature);
+    $("hPh").textContent = okPh(ph) ? ph.toFixed(2) : "--";
+    $("hTds").innerHTML = okTds(tds) ? `${Math.round(tds)}<small>ppm</small>` : "--";
+    $("hTemp").innerHTML = okTemp(t) ? `${t.toFixed(1)}<small>°C</small>` : "--";
+  } else $("heroMeta").textContent = "No test recorded yet";
+}
+
+function lineChart(el, series, o) {
+  if (series.length < 2) { el.innerHTML = '<p class="chart-empty">Run at least two tests to see a trend.</p>'; return; }
+  const W = 440, H = 150, px = 10, py = 14;
+  const x = (i) => px + i * (W - 2 * px) / (series.length - 1);
+  const y = (v) => py + (1 - (v - o.min) / (o.max - o.min)) * (H - 2 * py);
+  let g = "";
+  (o.bands || []).forEach((b) => { g += `<rect x="${px}" y="${y(b.to)}" width="${W - 2 * px}" height="${y(b.from) - y(b.to)}" style="fill:${b.fill}"/>`; });
+  (o.lines || []).forEach((l) => {
+    g += `<line x1="${px}" x2="${W - px}" y1="${y(l.v)}" y2="${y(l.v)}" style="stroke:#c8d6d8;stroke-dasharray:4 4"/><text x="${W - px}" y="${y(l.v) - 4}" text-anchor="end" style="fill:#6a818c;font-size:10px">${l.label}</text>`;
+  });
+  const pts = series.map((p, i) => [x(i), y(p.v)]);
+  const line = "M" + pts.map((p) => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L");
+  const last = pts[pts.length - 1];
+  g += `<path d="${line} L${last[0]} ${H - py} L${pts[0][0]} ${H - py} Z" style="fill:rgba(14,124,134,.1)"/>`;
+  g += `<path d="${line}" style="fill:none;stroke:#0e7c86;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/>`;
+  pts.forEach((p, i) => { g += `<circle cx="${p[0]}" cy="${p[1]}" r="${i === pts.length - 1 ? 5 : 3}" style="fill:#fff;stroke:#0e7c86;stroke-width:2"><title>${o.fmt(series[i].v)} on ${series[i].t}</title></circle>`; });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.label}">${g}</svg>`;
+}
+
+function paintCharts() {
+  const chron = [...rows].reverse();
+  const phS = chron.filter((r) => okPh(Number(r.ph))).map((r) => ({ v: Number(r.ph), t: fmtTime(r.ts) }));
+  const tdsS = chron.filter((r) => okTds(Number(r.tds))).map((r) => ({ v: Number(r.tds), t: fmtTime(r.ts) }));
+  const phVals = phS.map((p) => p.v);
+  lineChart($("phChart"), phS, { min: Math.floor(Math.min(...phVals, 5) - 0.5), max: Math.ceil(Math.max(...phVals, 9) + 0.5),
+    bands: [{ from: L.HIGH_PH_MIN, to: L.HIGH_PH_MAX, fill: "rgba(23,152,107,.11)" }], fmt: (v) => v.toFixed(2), label: "pH trend" });
+  $("phTrendSub").textContent = phS.length ? `Green band is 7.0 to 8.9. Latest ${phVals[phVals.length - 1].toFixed(2)}.` : "Oldest to newest";
+  const tVals = tdsS.map((p) => p.v);
+  lineChart($("tdsChart"), tdsS, { min: 0, max: Math.max(900, Math.max(...tVals, 0) * 1.1),
+    lines: [{ v: L.HIGH_TDS, label: "500" }, { v: L.MOD_TDS, label: "800" }], fmt: (v) => Math.round(v) + " ppm", label: "TDS trend" });
+  $("tdsTrendSub").textContent = tdsS.length ? `Dashed lines mark 500 and 800 ppm. Latest ${Math.round(tVals[tVals.length - 1])} ppm.` : "Oldest to newest";
+}
+
+function paintHistory() {
+  const body = $("history");
+  body.replaceChildren();
+  $("histSub").textContent = rows.length ? `Latest ${rows.length} completed tests` : "Latest 50 completed tests";
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="empty">No tests yet. Run your first test above.</td></tr>'; return; }
+  rows.forEach((r) => {
+    const label = classify(r.result || r.waterStatus), m = META[label];
+    const ph = Number(r.ph), tds = Number(r.tds), t = Number(r.temperature);
+    const cells = [
+      ["Date and time", fmtTime(r.ts), ""], ["Started from", sourceName(r.trigger), ""],
+      ["pH", okPh(ph) ? ph.toFixed(2) : "--", "n"], ["TDS (ppm)", okTds(tds) ? String(Math.round(tds)) : "--", "n"],
+      ["Temp (°C)", okTemp(t) ? t.toFixed(1) : "--", "n"], ["Rating", null, ""], ["Buzzer", r.buzzerOn === true ? "On" : "Off", ""]
+    ];
+    const tr = document.createElement("tr");
+    cells.forEach(([lab, text, cls]) => {
+      const td = document.createElement("td");
+      td.dataset.label = lab;
+      if (cls) td.className = cls;
+      if (text === null) { const sp = document.createElement("span"); sp.className = "pill " + m.cls; sp.textContent = label === "NONE" ? "Not rated" : m.word; td.appendChild(sp); }
+      else td.textContent = text;
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function loadHistory(data) {
+  rows = Object.entries(data || {}).map(([id, r]) => ({ id, ...r, ts: Number(r.timestamp || r.testedAt || 0) })).sort((a, b) => b.ts - a.ts);
+  const newest = rows[0];
+  if (historyReady && newest && newest.id !== lastNewestKey) toast(`New test from ${sourceName(newest.trigger).toLowerCase()}: ${META[classify(newest.result || newest.waterStatus)].word}`);
+  historyReady = true;
+  lastNewestKey = newest ? newest.id : null;
+  paintHero(); paintCharts(); paintHistory();
+}
+
+function setButton(busy, label) {
+  const b = $("testBtn");
+  b.disabled = busy;
+  b.innerHTML = (busy ? '<span class="spin"></span>' : "") + `<span id="testLabel">${label}</span>`;
+}
+function finishPending(message) {
+  clearTimeout(timeoutHandle); pendingId = null;
+  setButton(false, "Test water now");
+  $("testMessage").textContent = message;
+  paintHero();
+}
+const checkCompletion = (id) => { if (pendingId && id === pendingId) finishPending("Test complete and saved to history."); };
+
+$("testBtn").addEventListener("click", async () => {
+  if (!auth.currentUser || pendingId) return;
+  const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(16).slice(2);
+  pendingId = id;
+  setButton(true, "Sending request");
+  $("testMessage").textContent = "Sending the test command to your kit.";
+  paintHero();
+  try {
+    await set(ref(db, `${base}/command`), { action: "RUN", requestId: id, requestedAt: Date.now(), requestedBy: auth.currentUser.email || "authenticated-user" });
+    setButton(true, "Waiting for the kit");
+    $("testMessage").textContent = "Request sent. Keep the probes in the water.";
+    timeoutHandle = setTimeout(() => { if (pendingId === id) finishPending("No reply from the kit. Check its power, Wi-Fi and Serial Monitor."); }, REQUEST_TIMEOUT_MS);
+  } catch (e) { finishPending("Could not send the request: " + e.message); }
+});
+
+function startListeners() {
+  stopListeners();
+  historyReady = false; lastNewestKey = null;
+  unsubs.push(onValue(ref(db, `${base}/status`), (s) => {
+    lastStatus = s.val() || {};
+    paintLive();
+    if (lastStatus.lastTestRequestId) checkCompletion(lastStatus.lastTestRequestId);
+    if (!rows.length) paintHero();
+  }, (e) => { $("testMessage").textContent = "Status read error: " + e.message; }));
+  unsubs.push(onValue(query(ref(db, `${base}/history`), limitToLast(50)), (s) => loadHistory(s.val()), (e) => console.error("History listener:", e)));
+  unsubs.push(onValue(ref(db, `${base}/command`), (s) => { const c = s.val(); if (c && c.action === "DONE") checkCompletion(c.requestId); }));
+}
+function stopListeners() { unsubs.forEach((u) => u()); unsubs = []; }
+
+$("exportBtn").addEventListener("click", () => {
+  if (!rows.length) { toast("No history to export yet."); return; }
+  const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [["Date and time", "Started from", "pH", "TDS (ppm)", "Temperature (C)", "Rating", "Buzzer"].map(q).join(",")];
+  rows.forEach((r) => {
+    const ph = Number(r.ph), tds = Number(r.tds), t = Number(r.temperature);
+    lines.push([new Date(r.ts).toISOString(), sourceName(r.trigger), okPh(ph) ? ph.toFixed(2) : "", okTds(tds) ? Math.round(tds) : "", okTemp(t) ? t.toFixed(1) : "",
+      META[classify(r.result || r.waterStatus)].word, r.buzzerOn === true ? "On" : "Off"].map(q).join(","));
+  });
+  const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: "aquasense-history.csv" });
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+const authMessages = {
+  "auth/invalid-credential": "That email or password is not correct.",
+  "auth/invalid-email": "Enter a valid email address.",
+  "auth/user-disabled": "This account has been disabled.",
+  "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
+  "auth/network-request-failed": "Network error. Check your connection and try again."
+};
+$("reveal").addEventListener("click", () => {
+  const p = $("password"), show = p.type === "password";
+  p.type = show ? "text" : "password";
+  $("reveal").textContent = show ? "Hide" : "Show";
+  $("reveal").setAttribute("aria-label", show ? "Hide password" : "Show password");
+});
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("loginError").textContent = "";
+  const btn = $("loginBtn");
+  btn.disabled = true; btn.textContent = "Signing in";
+  try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); }
+  catch (err) { $("loginError").textContent = authMessages[err.code] || "Could not sign in. " + err.message; }
+  finally { btn.disabled = false; btn.textContent = "Sign in to dashboard"; }
+});
+$("logout").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  $("loginView").classList.toggle("hidden", !!user);
+  $("dashboardView").classList.toggle("hidden", !user);
+  if (user) startListeners();
+  else { stopListeners(); lastStatus = null; rows = []; pendingId = null; }
+});
+</script>
+</body>
+</html>
